@@ -1,8 +1,8 @@
 const http = require('http');
-var Mongoose = require('mongoose');
 var CryptoJS = require('crypto-js');
-var userInfo=require('../business/userInfo');
-var util=require('../utils/util');
+var userInfo = require('../business/userInfo');
+var util = require('../utils/util');
+const searcher = require('evenboy-ip2region').create();
 let provinceData = [
     "北京市",
     "天津市",
@@ -178,68 +178,37 @@ exports.getIp = function (req, res, next) {
         return;
     }
     tempIp = tempIp.split(":")[tempIp.split(":").length - 1];
-    http.get(`http://ip.taobao.com/service/getIpInfo.php?ip=${tempIp}`, (resp) => {
-        const {
-            statusCode
-        } = resp;
-        let error;
-        if (statusCode !== 200) {
-            error = new Error('请求失败。\n' + `状态码: ${statusCode}`);
-        }
-        if (error) {
-            console.error(error.message);
-            resp.resume();
+    // var tempData = searcher.btreeSearchSync(tempIp);
+    searcher.binarySearch(tempIp,function(err,tempData){
+        if(err){
             req.netInfo = netInfo;
-            next(null);
-            return;
+            next();
         }
-        resp.setEncoding('utf8');
-        let rawData = '';
-        resp.on('data', (chunk) => {
-            rawData += chunk;
-        });
-        resp.on('end', () => {
-            try {
-                const parsedData = JSON.parse(rawData || null);
-                if (parsedData && parsedData.code == 0) {
-                    let tempData = parsedData.data;
-                    if (tempData.region == "澳门") {
-                        tempData.region = "澳门特别行政区";
-                    } else if (tempData.region == "香港") {
-                        tempData.region = "香港特别行政区";
-                    } else if (tempData.region == "台湾") {
-                        tempData.region = "台湾省";
-                    } else if (tempData.region) {
-                        provinceData.forEach(function (val) {
-                            if (val.indexOf(tempData.region) != -1) {
-                                tempData.region = val;
-                            }
-                        })
+        if (tempData.region) {
+            let temp = tempData.region.split('|');
+            netInfo.country_nameCN = temp[0] == '0' ? '内网' : temp[0]; //国家
+            netInfo.mostSpecificSubdivision_nameCN = temp[2] == '0' ? '内网' : temp[2]; //省
+            netInfo.city_nameCN = temp[3] == '0' ? '内网' : temp[3]; //市
+            netInfo.isp = temp[4] == '0' ? '内网' : temp[4]; //isp
+            netInfo.organizationCN = temp[4] == '0' ? '内网' : temp[4]; //isp
+            netInfo.onlineip = tempIp; //ip
+            if (netInfo.mostSpecificSubdivision_nameCN == "澳门") {
+                netInfo.mostSpecificSubdivision_nameCN = "澳门特别行政区";
+            } else if (netInfo.mostSpecificSubdivision_nameCN == "香港") {
+                netInfo.mostSpecificSubdivision_nameCN = "香港特别行政区";
+            } else if (netInfo.mostSpecificSubdivision_nameCN == "台湾") {
+                netInfo.mostSpecificSubdivision_nameCN = "台湾省";
+            } else if (netInfo.mostSpecificSubdivision_nameCN) {
+                provinceData.forEach(function (val) {
+                    if (val.indexOf(netInfo.mostSpecificSubdivision_nameCN) != -1) {
+                        netInfo.mostSpecificSubdivision_nameCN = val;
                     }
-                    netInfo = {
-                        //地理位置
-                        city_nameCN: tempData.city,
-                        country_nameCN: tempData.country,
-                        latitude: 0,
-                        longitude: 0,
-                        mostSpecificSubdivision_nameCN: tempData.region,
-                        onlineip: tempData.ip,
-                        isp: tempData.isp,
-                        organizationCN: tempData.isp
-                    };
-                }
-                req.netInfo = netInfo;
-                next(null);
-            } catch (e) {
-                req.netInfo = netInfo;
-                next(null);
+                })
             }
-        });
-    }).on('error', (e) => {
+        }
         req.netInfo = netInfo;
-        next(null);
-        console.error(`错误: ${e.message}`);
-    });;
+        next();
+    });
 };
 
 /**************************************************************
@@ -282,23 +251,23 @@ exports.resolveToken = (req, res, next) => {
     let tempToken = req.headers["authorization"];
     if (tempToken) {
         let s = this.decrypt(tempToken);
-        let userId=s.split("@")[0];
-        userInfo.validToken(userId).then((r)=>{
-            if(r.token==tempToken){
-                req.userId=userId;
+        let userId = s.split("@")[0];
+        userInfo.validToken(userId).then((r) => {
+            if (r.token == tempToken) {
+                req.userId = userId;
                 next();
-            }else{
+            } else {
                 res.json(util.resJson({
                     IsSuccess: false,
-                    Data:"Token不一致"
+                    Data: "Token不一致"
                 }));
             }
-        },(err)=>{
+        }, (err) => {
             res.json(util.resJson({
                 IsSuccess: false,
-                Data:"Token不一致"
+                Data: "Token不一致"
             }));
-            
+
         })
     } else {
         next();
