@@ -6,7 +6,8 @@
 - [x] 从不同维度统计用户访问情况
 - [x] 自定义查询时间
 - [x] 多种图表展示
-- [x] 支持自定义上报（js错误，api请求）
+- [x] 支持自定义上报（js错误，api请求，性能信息）
+- [x] 用户访问路径追踪
 - [ ] 自定义阈值
 - [ ] 自动报警功能
 
@@ -50,8 +51,9 @@
 ### API请求
 
 默认情况下，使用XMLHTTP拦截用户请求，在请求成功/失败后，统计时间，上报请求。
-用户可使用**__ml.api(success, time, code, msg)**手动上报。
+用户可使用**__ml.api(api,success, time, code, msg)**手动上报。
 ```javascript
+ api:请求接口
  success:上传是否成功(true/false )
  time:耗时(ms)
  code:返回码

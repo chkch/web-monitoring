@@ -7,6 +7,7 @@ var pvInfo = require('../business/pvInfo');
 var apiInfo = require('../business/apiInfo');
 var perfInfo = require('../business/perfInfo');
 var jsError = require('../business/jsError');
+var resourceInfo = require('../business/resourceInfo');
 /* dashboard */
 router.post('/SiteList', site.list);
 router.get('/SiteList', site.list);
@@ -15,7 +16,40 @@ router.post('/RegisterSite', site.create);
 //应用设置
 router.post('/SiteSet', site.update);
 
-//应用总览
+
+//用户访问路径
+router.post('/userPathListStatis', function(req, res, next) {
+    pvInfo.userPathListStatis(req).then((r) => {
+        res.json(util.resJson({
+            IsSuccess: true,
+            Data: r
+        }));
+    }, (err) => {
+        console.error(err);
+        res.json(util.resJson({
+            IsSuccess: false,
+            Data: null
+        }));
+    });
+});
+
+
+//资源加载情况
+router.post('/resourceList', function(req, res, next) {
+    resourceInfo.list(req).then((r) => {
+        res.json(util.resJson({
+            IsSuccess: true,
+            Data: r
+        }));
+    }, (err) => {
+        console.error(err);
+        res.json(util.resJson({
+            IsSuccess: false,
+            Data: null
+        }));
+    });
+});
+
 // pv/uv
 router.post('/PvAndUvStatis', function(req, res, next) {
     pvInfo.pvAndUvStatis(req).then((r) => {
@@ -128,6 +162,22 @@ router.post('/PageRankStatis', function(req, res, next) {
     });
 });
 
+// 访问明细-jsErrorTrackPath
+router.post('/JsErrorTrackPath', function(req, res, next) {
+    jsError.jsErrorTrackPath(req).then((r) => {
+        res.json(util.resJson({
+            IsSuccess: true,
+            Data: r
+        }));
+    }, (err) => {
+        console.error(err);
+        res.json(util.resJson({
+            IsSuccess: false,
+            Data: null
+        }));
+    });
+});
+
 
 // 访问页面-jsErrorRate
 router.post('/JsErrorRate', function(req, res, next) {
@@ -144,6 +194,55 @@ router.post('/JsErrorRate', function(req, res, next) {
         }));
     });
 });
+
+// 应用总览（访问速度）-perfSpeedCompareAndAvg
+router.post('/PerfSpeedCompareAndAvg', function(req, res, next) {
+    perfInfo.perfSpeedCompareAndAvg(req).then((r) => {
+        res.json(util.resJson({
+            IsSuccess: true,
+            Data: r
+        }));
+    }, (err) => {
+        console.error(err);
+        res.json(util.resJson({
+            IsSuccess: false,
+            Data: null
+        }));
+    });
+});
+
+// 应用总览（JS错误率）-jsErrorRateCompareAndAvg
+router.post('/JsErrorRateCompareAndAvg', function(req, res, next) {
+    jsError.jsErrorRateCompareAndAvg(req).then((r) => {
+        res.json(util.resJson({
+            IsSuccess: true,
+            Data: r
+        }));
+    }, (err) => {
+        console.error(err);
+        res.json(util.resJson({
+            IsSuccess: false,
+            Data: null
+        }));
+    });
+});
+
+// 应用总览（Api成功率）-apiSuccRateCompareAndAvg
+router.post('/ApiSuccRateCompareAndAvg', function(req, res, next) {
+    apiInfo.apiSuccRateCompareAndAvg(req).then((r) => {
+        res.json(util.resJson({
+            IsSuccess: true,
+            Data: r
+        }));
+    }, (err) => {
+        console.error(err);
+        res.json(util.resJson({
+            IsSuccess: false,
+            Data: null
+        }));
+    });
+});
+
 
 // 访问页面-jsAggregate
 router.post('/JsAggregate', function(req, res, next) {

@@ -21,6 +21,10 @@ exports.list = async (req) => {
         },
         "appKey": appKey,
         $or: [{
+            "api": {
+                '$regex': new RegExp(`${req.body.keywords}.*`, "gi")
+            }
+        }, {
             "page": {
                 '$regex': new RegExp(`${req.body.keywords}.*`, "gi")
             }
@@ -33,7 +37,7 @@ exports.list = async (req) => {
                 '$regex': new RegExp(`${req.body.keywords}.*`, "gi")
             }
         }, {
-            "code": req.body.keywords
+            "code": isNaN(parseInt(req.body.keywords)) ? 0 : parseInt(req.body.keywords)
         }, {
             "msg": {
                 '$regex': new RegExp(`${req.body.keywords}.*`, "gi")
@@ -62,9 +66,57 @@ exports.apiStatis = async (req) => {
     body = util.computeSTimeAndEtime(body);
     let typeEnum = body.typeEnum;
     // name result
-    let r = [];
+    let r = {
+        data: [],
+        total: 0
+    };
     if (typeEnum == 0) { //成功率
-        r = await ApiModel.aggregate([{
+        r.data = await ApiModel.aggregate([{
+            "$match": {
+                "createTime": { '$gte': body.sTime, '$lt': body.eTime },
+                "appKey": appKey,
+                "api": { '$regex': new RegExp(`${body.keywords}.*`, "gi") }
+            }
+        },
+        {
+            "$group": {
+                "_id": "$api",
+                "list": { '$push': { 'success': '$success' } },
+                "listSucc": { '$push': { 'success': true } },
+            }
+        },
+        {
+            "$project": {
+                "_id": 0,
+                'name': "$_id",
+                'list': 1,
+                "count": {
+                    "$size": '$listSucc'
+                }
+            }
+        },
+        {
+            "$sort": {
+                'count': 1
+            }
+        },
+        {
+            "$skip": (body.pageIndex - 1) * body.pageSize
+        },
+        {
+            "$limit": body.pageSize
+        }
+        ]);
+        _.each(r.data, (d) => {
+            // let temp = [];
+            // temp = _.filter(d.list, function (e) {
+            //     return e.success;
+            // });
+            d.result = d.count / d.list.length;
+            delete d['list'];
+        });
+
+        let temp = await ApiModel.aggregate([{
             "$match": {
                 "createTime": { '$gte': body.sTime, '$lt': body.eTime },
                 "appKey": appKey,
@@ -76,28 +128,14 @@ exports.apiStatis = async (req) => {
                 "_id": "$api",
                 "list": { '$push': { 'success': '$success' } }
             }
-        },
-        {
-            "$project": {
-                "_id": 0,
-                'name': "$_id",
-                'list': 1
-            }
         }
         ]);
-        _.each(r, (d) => {
-            let temp = [];
-            temp = _.filter(d.list, function (e) {
-                return e.success;
-            });
-            d.result = temp.length / d.list.length;
-            delete d['list'];
-        });
-        r = _.sortBy(r, "result");
+        r.total = temp.length;
+        r.data = _.sortBy(r.data, "result");
     }
 
     if (typeEnum == 1) { //msg聚类
-        r = await ApiModel.aggregate([{
+        r.data = await ApiModel.aggregate([{
             "$match": {
                 "createTime": { '$gte': body.sTime, '$lt': body.eTime },
                 "appKey": appKey,
@@ -114,14 +152,43 @@ exports.apiStatis = async (req) => {
             "$project": {
                 "_id": 0,
                 'name': "$_id",
-                'result': { "$size": '$list' }
+                'result': { "$size": '$list' },
+                "count": {
+                    "$size": '$list'
+                }
+            }
+        },
+        {
+            "$sort": {
+                'count': -1
+            }
+        },
+        {
+            "$skip": (body.pageIndex - 1) * body.pageSize
+        },
+        {
+            "$limit": body.pageSize
+        }
+        ]);
+        let temp1 = await ApiModel.aggregate([{
+            "$match": {
+                "createTime": { '$gte': body.sTime, '$lt': body.eTime },
+                "appKey": appKey,
+                "msg": { '$regex': new RegExp(`${body.keywords}.*`, "gi") }
+            }
+        },
+        {
+            "$group": {
+                "_id": "$msg",
+                "list": { '$push': '$msg' }
             }
         }
         ]);
+        r.total = temp1.length;
     }
 
     if (typeEnum == 2) { //成功耗时
-        r = await ApiModel.aggregate([{
+        r.data = await ApiModel.aggregate([{
             "$match": {
                 "createTime": { '$gte': body.sTime, '$lt': body.eTime },
                 "appKey": appKey,
@@ -136,6 +203,17 @@ exports.apiStatis = async (req) => {
             }
         },
         {
+            "$sort": {
+                'result': -1
+            }
+        },
+        {
+            "$skip": (body.pageIndex - 1) * body.pageSize
+        },
+        {
+            "$limit": body.pageSize
+        },
+        {
             "$project": {
                 "_id": 0,
                 'name': "$_id",
@@ -143,10 +221,26 @@ exports.apiStatis = async (req) => {
             }
         }
         ]);
+        let temp2 = await ApiModel.aggregate([{
+            "$match": {
+                "createTime": { '$gte': body.sTime, '$lt': body.eTime },
+                "appKey": appKey,
+                "api": { '$regex': new RegExp(`${body.keywords}.*`, "gi") },
+                "success": true
+            }
+        },
+        {
+            "$group": {
+                "_id": "$api",
+                "result": { '$avg': '$time' }
+            }
+        }
+        ]);
+        r.total = temp2.length;
     }
 
     if (typeEnum == 3) { //失败耗时
-        r = await ApiModel.aggregate([{
+        r.data = await ApiModel.aggregate([{
             "$match": {
                 "createTime": { '$gte': body.sTime, '$lt': body.eTime },
                 "appKey": appKey,
@@ -161,6 +255,17 @@ exports.apiStatis = async (req) => {
             }
         },
         {
+            "$sort": {
+                'result': -1
+            }
+        },
+        {
+            "$skip": (body.pageIndex - 1) * body.pageSize
+        },
+        {
+            "$limit": body.pageSize
+        },
+        {
             "$project": {
                 "_id": 0,
                 'name': "$_id",
@@ -168,9 +273,66 @@ exports.apiStatis = async (req) => {
             }
         }
         ]);
+        let temp3 = await ApiModel.aggregate([{
+            "$match": {
+                "createTime": { '$gte': body.sTime, '$lt': body.eTime },
+                "appKey": appKey,
+                "api": { '$regex': new RegExp(`${body.keywords}.*`, "gi") },
+                "success": false
+            }
+        },
+        {
+            "$group": {
+                "_id": "$api",
+                "result": { '$avg': '$time' }
+            }
+        }
+        ]);
+        r.total = temp3.length;
     }
     return r;
 };
+
+
+/**
+ * API成功率同比和均值
+ * @param {*} req 
+ */
+exports.apiSuccRateCompareAndAvg = async (req) => {
+    let body = req.body;
+    let appKey = new Mongoose.Types.ObjectId(body.appKey);
+    body = util.computeSTimeAndEtimeAndTimeDivider(body);
+    let matchCond = {
+        "createTime": {
+            '$gte': body.sTime,
+            '$lt': body.eTime
+        },
+        "appKey": appKey
+    };
+
+    // 查询当前阶段
+    let r1 = await ApiModel.find(_.assign({ success: true }, matchCond)).countDocuments();
+    let r2 = await ApiModel.find(matchCond).countDocuments();
+    let rate1 = isNaN(r1 / r2) ? 0 : (r1 / r2);
+
+    let minusResult = body.eTime - body.sTime;
+    let matchCond1 = {
+        "createTime": {
+            '$gte': new Date(body.sTime).setMilliseconds(new Date(body.sTime).getMilliseconds() - minusResult),
+            '$lt': new Date(body.eTime).setMilliseconds(new Date(body.eTime).getMilliseconds() - minusResult)
+        },
+        "appKey": appKey
+    };
+    // 查询往前推
+    let r11 = await ApiModel.find(_.assign({ success: true }, matchCond1)).countDocuments();
+    let r21 = await ApiModel.find(matchCond1).countDocuments();
+    let rate2 = isNaN(r11 / r21) ? 0 : (r11 / r21);
+    return new Number(rate1 - rate2);
+};
+
+
+
+
 
 /**
  * API请求-APi成功率
@@ -756,7 +918,7 @@ exports.apiCase = async (req) => {
     },
     {
         "$group": {
-            "_id": 'api',
+            "_id": '$api',
             "avgTime": { "$avg": "$time" },
             "codeDetailsList": {
                 "$push": {

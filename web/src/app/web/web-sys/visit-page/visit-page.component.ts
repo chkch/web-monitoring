@@ -2,7 +2,7 @@
 import {fromEvent as observableFromEvent,  Observable } from 'rxjs';
 
 import {debounceTime} from 'rxjs/operators';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Broadcaster } from './../../../monitor.common.service';
 import { HttpClient } from '@angular/common/http';
 import { Component, OnInit, ViewChildren, ElementRef, Renderer2 } from '@angular/core';
@@ -47,13 +47,16 @@ export class VisitPageComponent implements OnInit {
   JsData = [];
   apiData = [];
   keywords = '';
+  pageIndex=1;
+  pageSize=50;
   currentSelectedPage
   JsGroupData = [];
   constructor(
     private render: Renderer2,
     private http: HttpClient,
     private broadcaster: Broadcaster,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private router:Router
   ) { }
 
   ngOnInit() {
@@ -108,20 +111,63 @@ export class VisitPageComponent implements OnInit {
     }
   }
 
-  //获取访问页面列表
-  loadPageList(time, type) {
+  
+  //加载更多
+  loadMore() {
+    let time;
+    let type;
+    if (window.globalTime) {
+      time=window.globalTime.time;
+      type=window.globalTime.type;
+    } else {
+      time=null;
+      type=4;
+    }
     this.isSpinning.spin1 = true;
+    this.pageIndex+=1;
     this.http.post("Monitor/PageRankStatis", {
       TimeQuantum: type == '7' ? '' : type,
       sTime: type == '7' ? time[0] : '',
       eTime: type == '7' ? time[1] : '',
       appKey: this.appKey,
-      keywords: this.keywords
+      keywords: this.keywords,
+      pageIndex:this.pageIndex,
+      pageSize:this.pageSize
+    }).subscribe((d: any) => {
+      if (d.IsSuccess) {
+        if (d.Data && d.Data.pageStatis.length > 0) {
+          _.each(d.Data.pageStatis, (val) => {
+            val.select = false;
+            val.percent = new Number((val.count / this.pageListData.totalCount) * 100).toFixed(2);
+          });
+          this.pageListData.pageStatis =[...this.pageListData.pageStatis, ...d.Data.pageStatis];
+        }
+      }
+      this.isSpinning.spin1 = false;
+    });
+  }
+
+  //获取访问页面列表
+  loadPageList(time, type) {
+    this.isSpinning.spin1 = true;
+    this.pageIndex=1;
+    this.http.post("Monitor/PageRankStatis", {
+      TimeQuantum: type == '7' ? '' : type,
+      sTime: type == '7' ? time[0] : '',
+      eTime: type == '7' ? time[1] : '',
+      appKey: this.appKey,
+      keywords: this.keywords,
+      pageIndex:this.pageIndex,
+      pageSize:this.pageSize
     }).subscribe((d: any) => {
       if (d.IsSuccess) {
         if (d.Data && d.Data.pageStatis.length > 0) {
           d.Data.pageStatis[0]['select'] = true;
           this.pageListData = d.Data;
+          _.each(this.pageListData.pageStatis, (val) => {
+            val.select = false;
+            val.percent = new Number((val.count / this.pageListData.totalCount) * 100).toFixed(2);
+          });
           this.selectPageListItem(d.Data.pageStatis[0]);
         }else{
           this.pageListData = null;
@@ -134,7 +180,6 @@ export class VisitPageComponent implements OnInit {
   selectPageListItem(data) {
     _.each(this.pageListData.pageStatis, (val) => {
       val.select = false;
-      val.percent = new Number((val.count / this.pageListData.totalCount) * 100).toFixed(2);
     });
     data.select = true;
     this.currentSelectedPage = data.page;
@@ -475,9 +520,8 @@ export class VisitPageComponent implements OnInit {
     };
   };
 
-  gotoDetails(data){
-    console.log(data);
-    
+  gotoDetails(data,data2){
+    this.router.navigate([`../visitDetails`],{queryParams:{sTime:data2.createTime,keywords:encodeURIComponent(data.apiName),type:'api'},relativeTo:this.route});
   }
 
   ngAfterViewInit() {

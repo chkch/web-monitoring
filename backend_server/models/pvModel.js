@@ -5,6 +5,7 @@ var schema = new Schema({
     updateTime: { type: Date, default: Date.now },
     type: String,
     page: String,
+    prePage: String,
     appKey: Schema.Types.ObjectId,
     os: String,
     bs: String,

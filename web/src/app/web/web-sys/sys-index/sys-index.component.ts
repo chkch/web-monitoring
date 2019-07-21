@@ -30,10 +30,15 @@ export class SysIndexComponent implements OnInit {
   unsubscribe = {
     sub1: null
   };
+  compareRate={
+    js:null,
+    speed:null,
+    api:null
+  }
   appKey;
   top10Data = [];
   mapData = [];
-  total_pv_uv:any={};
+  total_pv_uv: any = {};
   constructor(
     private http: HttpClient,
     private broadcaster: Broadcaster,
@@ -48,7 +53,12 @@ export class SysIndexComponent implements OnInit {
       this.loadBsData(data.time, data.type);
       this.loadOsData(data.time, data.type);
       this.loadWhData(data.time, data.type);
+      this.JsErrorRateCompareAndAvg(data.time, data.type);
+      this.PerfSpeedCompareAndAvg(data.time, data.type);
+      this.ApiSuccRateCompareAndAvg(data.time, data.type);
     });
+
+    
     if (window.globalTime) {
       this.loadPvUvData(window.globalTime.time, window.globalTime.type);
       this.loadTop10Data(window.globalTime.time, window.globalTime.type);
@@ -56,6 +66,9 @@ export class SysIndexComponent implements OnInit {
       this.loadBsData(window.globalTime.time, window.globalTime.type);
       this.loadOsData(window.globalTime.time, window.globalTime.type);
       this.loadWhData(window.globalTime.time, window.globalTime.type);
+      this.JsErrorRateCompareAndAvg(window.globalTime.time, window.globalTime.type);
+      this.PerfSpeedCompareAndAvg(window.globalTime.time, window.globalTime.type);
+      this.ApiSuccRateCompareAndAvg(window.globalTime.time, window.globalTime.type);
     } else {
       this.loadPvUvData(null, 4);
       this.loadTop10Data(null, 4);
@@ -63,6 +76,9 @@ export class SysIndexComponent implements OnInit {
       this.loadBsData(null, 4);
       this.loadOsData(null, 4);
       this.loadWhData(null, 4);
+      this.JsErrorRateCompareAndAvg(null, 4);
+      this.PerfSpeedCompareAndAvg(null, 4);
+      this.ApiSuccRateCompareAndAvg(null, 4);
     }
   }
 
@@ -72,7 +88,7 @@ export class SysIndexComponent implements OnInit {
   }
 
   ngAfterViewInit(): void {
-    this.broadcaster.broadcast('showGlobalTimer',true);
+    this.broadcaster.broadcast('showGlobalTimer', true);
   }
 
   selectOver(data, type) {
@@ -99,6 +115,50 @@ export class SysIndexComponent implements OnInit {
     }
   }
 
+  
+  
+  // 加载Api成功率
+  ApiSuccRateCompareAndAvg(time, type) {
+    this.http.post("Monitor/ApiSuccRateCompareAndAvg", {
+      TimeQuantum: type == '7' ? '' : type,
+      sTime: type == '7' ? time[0] : '',
+      eTime: type == '7' ? time[1] : '',
+      appKey: this.appKey
+    }).subscribe((d: any) => {
+      if (d.IsSuccess) {
+        this.compareRate.api=new Number(d.Data).toFixed(2);
+      }
+    })
+  }
+
+  // 加载JS错误率
+  JsErrorRateCompareAndAvg(time, type) {
+    this.http.post("Monitor/JsErrorRateCompareAndAvg", {
+      TimeQuantum: type == '7' ? '' : type,
+      sTime: type == '7' ? time[0] : '',
+      eTime: type == '7' ? time[1] : '',
+      appKey: this.appKey
+    }).subscribe((d: any) => {
+      if (d.IsSuccess) {
+        this.compareRate.js=new Number(d.Data).toFixed(2);
+      }
+    })
+  }
+
+   //加载速度
+   PerfSpeedCompareAndAvg(time, type) {
+    this.http.post("Monitor/PerfSpeedCompareAndAvg", {
+      TimeQuantum: type == '7' ? '' : type,
+      sTime: type == '7' ? time[0] : '',
+      eTime: type == '7' ? time[1] : '',
+      appKey: this.appKey
+    }).subscribe((d: any) => {
+      if (d.IsSuccess) {
+        this.compareRate.speed=new Number(d.Data).toFixed(0);
+      }
+    })
+  }
+
   //加载PV/UV数据
   loadPvUvData(time, type) {
     this.isSpinning.spin1 = true;
@@ -116,15 +176,15 @@ export class SysIndexComponent implements OnInit {
   }
   //渲染PV/UV对比图
   renderPvUvChart(type, data) {
-    
+
     let tempData = {
       pv: [],
       uv: []
     };
 
-    this.total_pv_uv={
-      totalPv:data.totalPv,
-      totalUv:data.totalUv
+    this.total_pv_uv = {
+      totalPv: data.totalPv,
+      totalUv: data.totalUv
     };
     _.each(data.pvAndUvVmList, (val) => {
       tempData.pv.push([new Date(val.createTime).getTime(), val.pv]);
@@ -178,17 +238,20 @@ export class SysIndexComponent implements OnInit {
       appKey: this.appKey
     }).subscribe((d: any) => {
       if (d.IsSuccess) {
-        let tempData=[];
+        let tempData = [];
         _.each(d.Data, (val) => {
           tempData.push({
-            name:val.provice,
-            value:val.pv,
-            pv:val.pv,
-            uv:val.uv
+            name: val.provice,
+            value: val.pv,
+            pv: val.pv,
+            uv: val.uv
           });
         });
+        tempData.sort(function (a, b) {
+          return a.uv > b.uv ? -1 : 1;
+        })
         this.mapData = _.cloneDeep(tempData);
-        this.renderGeoChart(type,tempData);
+        this.renderGeoChart(type, tempData);
       }
       this.isSpinning.spin3 = false;
     })
@@ -231,7 +294,7 @@ export class SysIndexComponent implements OnInit {
   }
   //渲染浏览器BS占比图
   renderBsChart(type, data) {
-    let tempData=[];
+    let tempData = [];
     _.each(data, (val) => {
       tempData.push([val.bs, val.count]);
     });
@@ -264,7 +327,7 @@ export class SysIndexComponent implements OnInit {
   }
   //渲染操作系统OS占比图
   renderOsChart(type, data) {
-    let tempData=[];
+    let tempData = [];
     _.each(data, (val) => {
       tempData.push([val.os, val.count]);
     });
@@ -297,7 +360,7 @@ export class SysIndexComponent implements OnInit {
   }
   //渲染分辨率PV占比图
   renderWhChart(type, data) {
-    let tempData=[];
+    let tempData = [];
     _.each(data, (val) => {
       tempData.push([val.pageWh, val.count]);
     });

@@ -1,11 +1,13 @@
+import { debounceTime } from 'rxjs/operators';
 import { Broadcaster } from './../../monitor.common.service';
 import { CookieService } from 'ngx-cookie-service';
 import { Router } from '@angular/router';
 import { NzMessageService } from 'ng-zorro-antd';
 import { HttpClient } from '@angular/common/http';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, Renderer2 } from '@angular/core';
 import * as CryptoJS from "crypto-js";
 import { UserService } from '../../monitor.common.service';
+import { Subscription, fromEvent } from 'rxjs';
 @Component({
   selector: 'app-homepage',
   templateUrl: './homepage.component.html',
@@ -24,22 +26,31 @@ export class HomepageComponent implements OnInit {
   };
   isVisible_login: boolean = false;
   isVisible_register: boolean = false;
-  isLogin:boolean=false;
+  isLogin: boolean = false;
+  unsubscribe: Subscription;
   constructor(
     private http: HttpClient,
     private msg: NzMessageService,
     private router: Router,
     private cookie: CookieService,
-    private user:UserService,
-    private broadcaster:Broadcaster
+    private user: UserService,
+    private broadcaster: Broadcaster,
+    private render: Renderer2
   ) { }
 
   ngOnInit() {
-    setTimeout(()=>{
-      this.isLogin=this.user.getToken()?true:false;
-    },1000)
-    let temp: any = document.querySelector("#video-index");
-    temp.style = `width:100%;height:auto;`;
+    setTimeout(() => {
+      this.isLogin = this.user.getToken() ? true : false;
+    }, 1000);
+    // this.unsubscribe = fromEvent(window, "resize").pipe(
+    //   debounceTime(100))
+    //   .subscribe((event) => {
+    //     // this._resizePageHeight();
+    //   });
+  }
+
+  _resizePageHeight() {
+    this.render.setStyle(document.querySelector("#home-section"), "height", document.body.clientHeight - 50 + 'px');
   }
 
   login() {
@@ -58,21 +69,25 @@ export class HomepageComponent implements OnInit {
     })
   }
 
-  register() {
-    let pwd = this.encrypt(this.model2.password);
-    this.http.post("User/register", {
-      email: this.model2.email,
-      password: pwd
-    }).subscribe((r: any) => {
-      if (r.IsSuccess) {
-        this.cookie.set("user", JSON.stringify(r.Data), new Date(new Date().setMonth(new Date().getMonth() + 1)));
-        this.broadcaster.broadcast("refreshUser");
-        this.router.navigate(['dashboard']);
-      } else {
-        this.msg.error(r.Data, { nzDuration: 4000 });
-      }
-    })
+  ngOnDestroy(): void {
+    // this.unsubscribe.unsubscribe();
   }
+
+  // register() {
+  //   let pwd = this.encrypt(this.model2.password);
+  //   this.http.post("User/register", {
+  //     email: this.model2.email,
+  //     password: pwd
+  //   }).subscribe((r: any) => {
+  //     if (r.IsSuccess) {
+  //       this.cookie.set("user", JSON.stringify(r.Data), new Date(new Date().setMonth(new Date().getMonth() + 1)));
+  //       this.broadcaster.broadcast("refreshUser");
+  //       this.router.navigate(['dashboard']);
+  //     } else {
+  //       this.msg.error(r.Data, { nzDuration: 4000 });
+  //     }
+  //   })
+  // }
 
   private encrypt(str) {
     var key = CryptoJS.enc.Utf8.parse(this._KEY);

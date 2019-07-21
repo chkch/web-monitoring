@@ -39,7 +39,7 @@
         </div>
     </div>
 
-    <nz-table #nzTable [nzData]="dataSet" [nzScroll]="tableScrollSetting" [nzFrontPagination]="false" [nzLoading]="loading" [nzTotal]="total" [(nzPageIndex)]="searchModel.pageIndex" [(nzPageSize)]="searchModel.pageSize" (nzPageIndexChange)="searchData()"
+    <nz-table #nzTable [nzShowTotal]="totalTemplate" [nzData]="dataSet" [nzScroll]="tableScrollSetting" [nzFrontPagination]="false" [nzLoading]="loading" [nzTotal]="total" [(nzPageIndex)]="searchModel.pageIndex" [(nzPageSize)]="searchModel.pageSize" (nzPageIndexChange)="searchData()"
         (nzPageSizeChange)="searchData(true)">
         <thead>
             <tr>
@@ -55,7 +55,6 @@
                 <th *ngIf="searchModel.type=='api'" nzWidth="80px">Code</th>
                 <th *ngIf="searchModel.type=='api'" nzWidth="120px">IsSuccess</th>
                 <th *ngIf="searchModel.type=='api'" nzWidth="120px">Time</th>
-
                 <th *ngIf="searchModel.type=='js'" nzWidth="200px">Error</th>
             </tr>
         </thead>
@@ -67,7 +66,10 @@
                 <td>{{data.bs}}</td>
                 <td>{{data.os}}</td>
                 <td>{{data.ua}}</td>
-                <td>{{data.mostSpecificSubdivision_nameCN}}</td>
+                <td>
+                    {{data.mostSpecificSubdivision_nameCN}} <br/>
+                    {{data.onlineip}}
+                </td>
 
                 <td *ngIf="searchModel.type=='api'">{{data.api}}</td>
                 <td *ngIf="searchModel.type=='api'">
@@ -83,14 +85,17 @@
                 <td *ngIf="searchModel.type=='api'">{{data.time}}ms</td>
 
                 <td *ngIf="searchModel.type=='js'">
-                    <nz-popover [nzTitle]="" [nzPlacement]="'left'">
+                    <a (click)="errorTrack(data)" [title]="data.error?.substr(0,100)">错误场景还原</a>
+                    <!-- <nz-popover [nzTitle]="" [nzPlacement]="'left'">
                         <span nz-popover>{{data.error?.substr(0,100)}}</span>
                         <ng-template #nzTemplate>
-                            <div>{{data.error}}</div>
-                        </ng-template>
-                    </nz-popover>
+                            <a (click)="errorTrack(data)">错误场景还原</a>
+                            <div [innerHTML]='data.error' style="width: 400px;word-break: break-all;max-height: 400px;overflow: auto;"></div>
+                        </ng-template> 
+                    </nz-popover> -->
                 </td>
             </tr>
         </tbody>
     </nz-table>
+    <ng-template #totalTemplate let-total>共 {{total}} 条数据</ng-template>
 </div>

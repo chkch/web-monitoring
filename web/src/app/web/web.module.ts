@@ -17,6 +17,9 @@ import { ApiRequestComponent } from './web-sys/api-request/api-request.component
 import { VisitDetailsComponent } from './web-sys/visit-details/visit-details.component';
 import { VisitGeoComponent } from './web-sys/visit-geo/visit-geo.component';
 import { VisitOsComponent } from './web-sys/visit-os/visit-os.component';
+import { ResourceLoadDetailsComponent } from './web-sys/resource-load-details/resource-load-details.component';
+import { UserPathComponent } from './web-sys/user-path/user-path.component';
+import { JsErrorTrackComponent } from './web-sys/js-error-track/js-error-track.component';
 const routes: Routes = [
   {
     path: '', component: WebSysComponent, children: [
@@ -25,6 +28,8 @@ const routes: Routes = [
       { path: 'index', component: SysIndexComponent },
       // 设置
       { path: 'setting', component: SysSettingComponent },
+      // 用户访问路径
+      { path: 'userPath', component: UserPathComponent },
       // 访问页面
       { path: 'visitPage', component: VisitPageComponent },
       // 访问速度
@@ -39,6 +44,8 @@ const routes: Routes = [
       { path: 'visitGeo', component: VisitGeoComponent },
       // 终端
       { path: 'visitOs', component: VisitOsComponent },
+       // 资源加载详情
+       { path: 'resourceDetails', component: ResourceLoadDetailsComponent },
       // 后端日志
       { path: 'backendLog', component: BackendLogComponent }
     ]
@@ -53,6 +60,7 @@ const routes: Routes = [
     RouterModule.forChild(routes),
     PublicModule
   ],
-  declarations: [BackendLogComponent,WebSysComponent, SysIndexComponent, SysSettingComponent, VisitPageComponent, VisitSpeedComponent, JsErrorComponent, ApiRequestComponent, VisitDetailsComponent, VisitGeoComponent, VisitOsComponent]
+  entryComponents:[JsErrorTrackComponent],
+  declarations: [BackendLogComponent,WebSysComponent, SysIndexComponent, SysSettingComponent, VisitPageComponent, VisitSpeedComponent, JsErrorComponent, ApiRequestComponent, ResourceLoadDetailsComponent, VisitDetailsComponent, VisitGeoComponent, VisitOsComponent, UserPathComponent, JsErrorTrackComponent]
 })
 export class WebModule { }

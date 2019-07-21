@@ -17,6 +17,7 @@
           <i class="anticon anticon-right"></i>
         </span>
       </div>
+      <div (click)="loadMore()" *ngIf="pageListData?.pageStatis.length<pageListData?.total" style="text-align:center;padding:4px;cursor: pointer;">加载更多</div>
     </nz-spin>
 
   </div>
@@ -138,7 +139,7 @@
                   <td>{{data2.code}}</td>
                   <td>{{data2.createTime|date:"yyyy/MM/dd HH:mm:ss"}}</td>
                   <td>
-                    <a (click)="gotoDetails(data)">明细</a>
+                    <a (click)="gotoDetails(data,data2)">明细</a>
                   </td>
                 </tr>
               </tbody>
